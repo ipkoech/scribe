@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  user_input: MyText
+  bot_reply: MyText
+  role: MyString
+  conversation: one
+  liked: false
+  disliked: false
+  highlighted_text: MyText
+  reply_to_highlight: MyText
+
+two:
+  user_input: MyText
+  bot_reply: MyText
+  role: MyString
+  conversation: two
+  liked: false
+  disliked: false
+  highlighted_text: MyText
+  reply_to_highlight: MyText

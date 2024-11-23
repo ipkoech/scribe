@@ -1,0 +1,93 @@
+Rails.application.routes.draw do
+  resources :comments
+  require "sidekiq/web"
+  devise_for :users, defaults: { format: :json }, path: "", path_names: {
+                       sign_in: "login",
+                       registration: "signup",
+                     }, controllers: {
+                       sessions: "users/sessions",
+                       registrations: "users/registrations",
+                     }
+  # Sessions
+  devise_scope :user do
+    delete "logout", to: "users/sessions#logout"
+  end
+  resources :categories
+  resources :access_levels
+  resources :permissions, only: [:index, :show]
+  resources :roles, except: [:new, :edit] do
+    member do
+      post :update
+      post :detach_permissions
+      post "attach-permissions", to: "roles#add_permissions"
+      delete "revoke-permissions", to: "roles#remove_permissions"
+      post "attach-users", to: "roles#add_users"
+      delete "revoke-users", to: "roles#remove_users"
+    end
+  end
+
+  scope module: :users do
+    resources :users, only: [:index, :create, :destroy, :show, :update, :chat, :update_profile_image] do
+      collection do
+        get :current
+        get :permissions
+        post :assign_roles
+        delete :detach_roles, as: :detach_roles
+      end
+      member do
+        post :update, path: "update_details"
+        post :chat, path: "chat"
+        post :update_profile_image, path: "profile-image"
+      end
+    end
+  end
+  # media files
+  resources :media, only: [:index, :create, :destroy, :show, :update] do
+    # collection do
+    # end
+    member do
+      get :serve
+      post :update, path: "update"
+      get :download, path: "download"
+    end
+  end
+
+  resources :drafts, only: [:index, :create, :update, :show, :destroy] do
+    member do
+      post "start_review"
+      post "approve"
+      post "reject"
+      post "remove_collaborator"
+      post "add_collaborator"
+      post :update
+    end
+  end
+
+  # notifications
+  resources :notifications do
+    post :mark_as_read, on: :member, path: "mark-as-read"
+    post :mark_all_as_read, on: :collection
+  end
+  # Conversations and chats
+  resources :conversations, only: [:index, :create, :show, :destroy, :update] do
+    member do
+      patch :archive
+      post :share
+      post :update, path: "update"
+    end
+    resources :chats, only: [:index, :create, :update] do
+      member do
+        patch :highlight
+        post :like
+        post :dislike
+        post :update, path: "update"
+      end
+    end
+  end
+
+  resources :comments, only: [:index, :create, :destroy, :update, :show]
+
+  get "up" => "rails/health#show", as: :rails_health_check
+  mount ActionCable.server => "/cable"
+  mount Sidekiq::Web => "/sidekiq"
+end

@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  title: MyString
+  azure_url: MyString
+  type: 
+  size: MyString
+  user: one
+
+two:
+  title: MyString
+  azure_url: MyString
+  type: 
+  size: MyString
+  user: two
