@@ -73,7 +73,7 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
     ast (2.4.2)
-    azure-blob (0.5.3)
+    azure-blob (0.5.4)
       rexml
     base64 (0.2.0)
     bcrypt (3.1.20)
