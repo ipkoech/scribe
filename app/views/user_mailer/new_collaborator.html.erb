@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title><%= @title %></title>
+  <!-- Meta tag for better email rendering -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <!-- Email Header: Title of the email -->
+  <h1><%= @title %></h1>
+
+  <!-- Email Body: Notification message -->
+  <p><%= @body %></p>
+
+  <!-- Displaying Access Level: Only if it's present -->
+  <% if @access_level.present? %>
+    <p><strong>Access Level:</strong> <%= @access_level.capitalize %></p>
+  <% end %>
+
+  <!-- Displaying Reason: Only if it's present -->
+  <% if @reason.present? %>
+    <p><strong>Reason:</strong> <%= @reason %></p>
+  <% end %>
+
+  <!-- Including a link to view the draft -->
+  <p>To view the draft, click <a href="<%= @draft_url %>">here</a>.</p>
+
+  <!-- A call-to-action (CTA) section encouraging the user to check the draft -->
+  <p>If you have any questions or feedback, feel free to reach out.</p>
+
+  <!-- Email Footer -->
+  <p>Best regards,</p>
+  <p>Your team at <%= Rails.application.credentials.app_name %></p>
+
+  <!-- Optional: Add some styling to make the email look better -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    h1 {
+      color: #4CAF50;
+    }
+
+    p {
+      color: #333;
+    }
+
+    a {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</body>
+</html>

@@ -28,9 +28,9 @@ class ChatsController < ApplicationController
       # Update the same chat instance with bot response
       @user_chat.update(bot_reply: bot_response, role: "bot")
 
-      # Update the conversation title if it was null
-      @conversation.update(title: "Conversation started at #{Time.now.strftime("%Y-%m-%d %H:%M:%S")}") if @conversation.title.blank?
-
+      if @conversation.chats.count == 1 && @conversation.title.blank?
+        @conversation.update(title: user_input)
+      end
       render json: { status: :ok }
     else
       render json: { error: "Chat API request failed" }, status: :unprocessable_entity

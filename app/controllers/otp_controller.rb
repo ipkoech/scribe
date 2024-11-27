@@ -69,7 +69,7 @@ class OtpController < ApplicationController
     end
 
     # Generate OTP code for the user
-    user.generate_otp!
+    user.generate_o
 
     # Update the user's 2FA status
     if user.update(otp_enabled: true)

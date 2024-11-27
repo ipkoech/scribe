@@ -63,6 +63,17 @@ Rails.application.routes.draw do
     end
   end
 
+    # Define routes for OTP actions
+    post 'otp/send', to: 'otp#send_otp'
+    post 'otp/resend', to: 'otp#resend'
+    post 'otp/verify', to: 'otp#verify'
+  
+    # Define routes for enabling and disabling OTP
+    post 'otp/enable', to: 'otp#enable_two_factor'
+    post 'otp/disable', to: 'otp#disable_two_factor'
+    post '/users/:user_id/otp/enable', to: 'otp#enable_two_factor_for_user'
+    post '/users/:user_id/otp/disable', to: 'otp#disable_two_factor_for_user'
+  
   # notifications
   resources :notifications do
     post :mark_as_read, on: :member, path: "mark-as-read"

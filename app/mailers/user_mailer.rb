@@ -90,11 +90,13 @@ class UserMailer < ApplicationMailer
   end
 
 
-  # Custom method to handle custom notifications
-  def custom_notification_email(user, title, body, trigger_name, extra_params = {})
+  def custom_notification_email(user, title, body, extra_params = {})
     @user = user
     @title = title
     @body = body
+
+    # Extract trigger_name from extra_params
+    trigger_name = extra_params.delete(:trigger_name)
 
     # Fetch task, draft, and other entities dynamically from extra_params
     extra_params.each do |key, value|
@@ -111,4 +113,5 @@ class UserMailer < ApplicationMailer
       format.html { render "user_mailer/#{trigger_name}" }
     end
   end
+
 end

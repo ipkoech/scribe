@@ -220,7 +220,7 @@ class DraftsController < ApplicationController
               user: user,
               title: "You have been added as a collaborator to '#{@draft.title}'",
               body: "You have been given #{access_level} access to the draft for the following reason: #{reason}.",
-              extra_params: { draft_id: @draft.id, frontend_url: frontend_url },
+              extra_params: { draft_id: @draft.id, frontend_url: frontend_url,trigger_name: "new_collaborator"},
             )
 
             added_users << user

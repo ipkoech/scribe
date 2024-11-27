@@ -1,0 +1,23 @@
+current directory: /var/www/instascribe/scribe/vendor/cache/ruby/3.3.0/gems/rgeo-3.0.1/ext/geos_c_impl
+/home/revcat/.rbenv/versions/3.3.5/bin/ruby extconf.rb
+checking for geos-config... no
+checking for geos_c.h... no
+**** WARNING: Unable to find GEOS headers or libraries.
+**** Ensure that 'geos-config' is in your PATH or provide that full path via --with-geos-config
+**** Compiling without GEOS support.
+
+current directory: /var/www/instascribe/scribe/vendor/cache/ruby/3.3.0/gems/rgeo-3.0.1/ext/geos_c_impl
+make DESTDIR\= sitearchdir\=./.gem.20241123-3459340-eyalyd sitelibdir\=./.gem.20241123-3459340-eyalyd clean
+make: *** No rule to make target 'clean'.  Stop.
+
+current directory: /var/www/instascribe/scribe/vendor/cache/ruby/3.3.0/gems/rgeo-3.0.1/ext/geos_c_impl
+make DESTDIR\= sitearchdir\=./.gem.20241123-3459340-eyalyd sitelibdir\=./.gem.20241123-3459340-eyalyd
+make: Nothing to be done for 'install'.
+
+current directory: /var/www/instascribe/scribe/vendor/cache/ruby/3.3.0/gems/rgeo-3.0.1/ext/geos_c_impl
+make DESTDIR\= sitearchdir\=./.gem.20241123-3459340-eyalyd sitelibdir\=./.gem.20241123-3459340-eyalyd install
+make: Nothing to be done for 'install'.
+
+current directory: /var/www/instascribe/scribe/vendor/cache/ruby/3.3.0/gems/rgeo-3.0.1/ext/geos_c_impl
+make DESTDIR\= sitearchdir\=./.gem.20241123-3459340-eyalyd sitelibdir\=./.gem.20241123-3459340-eyalyd clean
+make: *** No rule to make target 'clean'.  Stop.

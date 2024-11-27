@@ -57,6 +57,7 @@ class User < ApplicationRecord
   def generate_otp!
     User.transaction do
       self.otp_code = 6.times.map { rand(10) }.join
+      Rails.logger.info('self.otp_code')
       self.otp_expires_at = 15.minutes.from_now
       save!
     end

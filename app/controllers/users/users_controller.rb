@@ -92,9 +92,10 @@ class Users::UsersController < ApplicationController
       begin
         params.require(:users).each do |user_params|
           random_password = SecureRandom.hex(8)
+          status = 'active'
 
-          merged_params = user_params.permit(:name, :email, role_ids: [])
-                                     .merge(password: random_password, password_confirmation: random_password)
+          merged_params = user_params.permit(:f_name,:l_name, :email, role_ids: [])
+                                     .merge(password: random_password, password_confirmation: random_password, status: status)
 
           user = User.new(merged_params.except(:role_ids))  # Exclude role_ids from initial assignment
           if user.save
@@ -160,13 +161,13 @@ class Users::UsersController < ApplicationController
   def update
     authorize User
     @user = User.find(params[:id])
-    original_attributes = @user.attributes.slice("name", "email", "otp_enabled", "otp_secret_key")
+    original_attributes = @user.attributes.slice("f_name","l_name", "email", "otp_enabled", "otp_secret_key")
     original_role_ids = @user.role_ids
 
     if @user.update(user_params.except(:role_ids))
       assign_roles_to_user(@user, params[:role_ids]) if params[:role_ids].present?
 
-      changes = detect_changes(original_attributes, @user.attributes.slice("name", "email", "otp_enabled", "otp_secret_key"))
+      changes = detect_changes(original_attributes, @user.attributes.slice("f_name","l_name", "email", "otp_enabled", "otp_secret_key"))
       role_changes = detect_role_changes(original_role_ids, @user.role_ids)
       changes.merge!(role_changes)
 
@@ -221,7 +222,7 @@ class Users::UsersController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:name, :email, :password, :password_confirmation, :otp_enabled, :otp_secret_key, role_ids: [])
+    params.require(:user).permit(:f_name,:l_name, :email, :password, :password_confirmation, :otp_enabled, :otp_secret_key, role_ids: [])
   end
 
   def assign_roles_to_user(user, role_ids)
