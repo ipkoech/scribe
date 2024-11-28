@@ -15,8 +15,8 @@ class User < ApplicationRecord
   has_one_attached :profile_image
 
   # Notifications associations
-  has_many :received_notifications, class_name: "Notification", as: :recipient
-  has_many :sent_notifications, class_name: "Notification", as: :actor
+  has_many :received_notifications, class_name: 'Notification', foreign_key: 'recipient_id'
+  has_many :sent_notifications, class_name: "Notification",foreign_key: 'actor_id'
 
   def mark_all_notifications_as_read!
     notifications.where(read_at: nil).update_all(read_at: Time.current)
@@ -85,7 +85,9 @@ class User < ApplicationRecord
   def generate_otp_backup_codes # Generate 10 backup codes
     10.times.map { SecureRandom.hex(4) }
   end
-
+  def admin?
+    roles.exists?(name: 'Super Admin')
+  end
   # RBAC methods
   def assign_role(role)
     roles << role unless roles.include?(role)

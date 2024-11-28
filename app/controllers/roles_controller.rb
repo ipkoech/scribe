@@ -72,14 +72,20 @@ class RolesController < ApplicationController
     end
   end
 
-  # New method to add permissions to a role
   def add_permissions
     authorize @role
     permission_ids = params[:permission_ids] || []
     attach_permissions(@role, permission_ids)
-    render json: @role.as_json(include: [ :permissions ]), status: :ok
+    render json: @role.as_json(include: [:permissions]), status: :ok
+  rescue ActiveRecord::RecordInvalid => e
+    render json: { error: e.record.errors.full_messages.join(", ") }, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotFound => e
+    render json: { error: e.message }, status: :not_found
+  rescue => e
+    Rails.logger.error("Error adding permissions to role #{role.id}: #{e.message}")
+    render json: { error: "An unexpected error occurred while adding permissions." }, status: :internal_server_error
   end
-
+  
   # New method to remove permissions from a role
   def remove_permissions
     authorize @role
@@ -138,9 +144,19 @@ class RolesController < ApplicationController
 
   private
   def attach_permissions(role, permission_ids)
-    permission_ids.each do |permission_id|
-      permission = Permission.find(permission_id)
-      role.permissions << permission
+    # Fetch existing permission IDs associated with the role
+    existing_permission_ids = role.permissions.pluck(:id)
+
+    # Determine which permission IDs are new
+    new_permission_ids = permission_ids - existing_permission_ids
+
+    # Attach only new permissions
+    role.permissions << Permission.where(id: new_permission_ids)
+
+    # Optionally, handle cases where some permission IDs are invalid or not found
+    invalid_permission_ids = permission_ids - Permission.where(id: permission_ids).pluck(:id)
+    unless invalid_permission_ids.empty?
+      raise ActiveRecord::RecordInvalid.new(role), "Some permissions do not exist: #{invalid_permission_ids.join(', ')}"
     end
   end
 

@@ -1,15 +1,15 @@
 class NotificationService
   class NotificationError < StandardError; end
 
-  def self.notify(user:, title:, body:, extra_params: {})
-    new(user, title, body, extra_params).deliver
+  def self.notify(user:, body:, extra_params: {})
+    new(user, body, extra_params).deliver
   end
 
-  def initialize(user, title, body, extra_params = {})
+  def initialize(user, body, extra_params = {})
     @user = user
-    @title = title
     @body = body
     @extra_params = extra_params
+    @title = extra_params[:title]  # Extract title from extra_params
   end
 
   def deliver
@@ -27,22 +27,23 @@ class NotificationService
 
   private
 
-  attr_reader :user, :title, :body, :extra_params
+  attr_reader :user, :body, :extra_params, :title
 
   def create_notification
     @notification = Notification.create!(
-      user: user,
-      title: title,
-      body: body,
-      metadata: extra_params,
-      status: "pending",
+      recipient: user,  # Correctly assign recipient_id
+      actor: @extra_params[:actor], # Assuming actor_id is passed in extra_params
+      notifiable_type: @extra_params[:notifiable_type], # e.g., "Draft"
+      notifiable_id: @extra_params[:notifiable_id], # e.g., draft.id
+      action: @extra_params[:action] || "added_collaborator", # Default action
+      data: @extra_params.merge({ title: title }), # Include title in data
     )
   end
 
   def send_email
     UserMailer.custom_notification_email(
       user,
-      title,
+      title,  # Pass title for email
       body,
       extra_params
     ).deliver_later
@@ -53,7 +54,7 @@ class NotificationService
       user,
       {
         action: "create",
-        notification: @notification.as_json(include: :user),
+        notification: @notification.as_json(include:  [:recipient, :actor]),
       }
     )
   end

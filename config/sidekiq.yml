@@ -1,0 +1,12 @@
+# config/sidekiq.yml
+
+:concurrency: 5
+:queues:
+  - [critical, 2]
+  - [high, 3]
+  - [default, 5]
+  - [low, 1]
+
+:logfile: ./log/sidekiq.log
+:pidfile: ./tmp/pids/sidekiq.pid
+:daemon: false

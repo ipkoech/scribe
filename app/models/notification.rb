@@ -13,6 +13,23 @@ class Notification < ApplicationRecord
     update(read_at: Time.current)
   end
 
+  
+  # Ransack Configuration
+  def self.ransackable_attributes(auth_object = nil)
+    %w[
+      action
+      actor_id
+      created_at
+      data
+      id
+      notifiable_id
+      notifiable_type
+      read_at
+      recipient_id
+      updated_at
+    ]
+  end
+
   private
 
   def broadcast_creation

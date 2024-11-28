@@ -1,4 +1,6 @@
-# Access Levels
+# db/seeds.rb
+
+# 1. Access Levels
 access_levels = [
   { name: 'Read', description: 'Can view but not modify' },
   { name: 'Write', description: 'Can create and edit' },
@@ -12,7 +14,9 @@ access_levels.each do |level|
   end
 end
 
-# Categories
+puts "Access levels seeded."
+
+# 2. Categories
 categories = [
   { name: 'User Management', description: 'Permissions related to user accounts and profiles' },
   { name: 'Content Management', description: 'Permissions for creating, editing, and deleting content' },
@@ -27,7 +31,9 @@ categories.each do |category|
   end
 end
 
-# Roles
+puts "Categories seeded."
+
+# 3. Roles
 roles = [
   { name: 'Guest', hierarchy_level: 0 },
   { name: 'User', hierarchy_level: 1 },
@@ -42,15 +48,35 @@ roles.each do |role|
   end
 end
 
-# Permissions
+puts "Roles seeded."
+
+# 4. Permissions
 permissions = [
   { name: 'view_profile', access_level: 'Read', category: 'User Management' },
   { name: 'edit_profile', access_level: 'Write', category: 'User Management' },
   { name: 'create_content', access_level: 'Write', category: 'Content Management' },
   { name: 'delete_content', access_level: 'Admin', category: 'Content Management' },
   { name: 'view_reports', access_level: 'Read', category: 'Reporting' },
+  { name: 'configure_system', access_level: 'Super Admin', category: 'System Settings' },
+  { name: 'detach_permissions', access_level: 'Admin', category: 'User Management' },
+  { name: 'add_users', access_level: 'Admin', category: 'User Management' },
+  { name: 'remove_users', access_level: 'Admin', category: 'User Management' },
+  { name: 'add_permissions', access_level: 'Admin', category: 'User Management' },
+  { name: 'remove_permissions', access_level: 'Admin', category: 'User Management' },
+  { name: 'create_comment', access_level: 'Write', category: 'Content Management' },
+  { name: 'update_comment', access_level: 'Write', category: 'Content Management' },
+  { name: 'show_comment', access_level: 'Read', category: 'Content Management' },
+  { name: 'destroy_comment', access_level: 'Admin', category: 'Content Management' },
   { name: 'manage_users', access_level: 'Admin', category: 'User Management' },
-  { name: 'configure_system', access_level: 'Super Admin', category: 'System Settings' }
+  { name: 'create draft', access_level: 'Write', category: 'Content Management' },
+  { name: 'list drafts', access_level: 'Read', category: 'Content Management' },
+  { name: 'read draft', access_level: 'Read', category: 'Content Management' },
+  { name: 'update draft', access_level: 'Write', category: 'Content Management' },
+  { name: 'delete draft', access_level: 'Admin', category: 'Content Management' },
+  { name: 'approve draft', access_level: 'Admin', category: 'Content Management' },
+  { name: 'reject draft', access_level: 'Admin', category: 'Content Management' },
+  { name: 'review draft', access_level: 'Write', category: 'Content Management' },
+  { name: 'manage_permissions', access_level: 'Admin', category: 'User Management' }
 ]
 
 permissions.each do |permission|
@@ -61,17 +87,38 @@ permissions.each do |permission|
   end
 end
 
-# Create a Super Admin User
-super_admin = User.find_or_create_by!(email: 'samuelndambuki401@gmail.com') do |user|
-  user.f_name = 'Samuel'
-  user.l_name = 'Ndambuki'
+puts "Permissions seeded."
+
+# 5. Assign All Permissions to Super Admin Role
+super_admin_role = Role.find_by(name: 'Super Admin')
+if super_admin_role
+  all_permission_ids = Permission.pluck(:id)
+  super_admin_role.permission_ids = all_permission_ids
+  puts "Assigned all permissions to the Super Admin role."
+else
+  puts "Super Admin role not found. Please ensure the role exists."
+end
+
+# 6. Create a Super Admin User
+super_admin = User.find_or_create_by!(email: 'roblineyegon@gmail.com') do |user|
+  user.f_name = 'Robline'
+  user.l_name = 'Yegon'
   user.status = 'active'
   user.otp_enabled = false
   user.password = 'password'
   user.password_confirmation = 'password'
   user.confirmed_at = Time.now
- end
+end
 
- # Assign Role to Super Admin User
- admin_role = Role.find_by(name: 'Super Admin')
- super_admin.roles << admin_role unless super_admin.roles.include?(admin_role)
+# Assign Role to Super Admin User
+admin_role = Role.find_by(name: 'Super Admin')
+if admin_role
+  unless super_admin.roles.include?(admin_role)
+    super_admin.roles << admin_role
+    puts "Assigned Super Admin role to user #{super_admin.email}."
+  else
+    puts "User #{super_admin.email} already has the Super Admin role."
+  end
+else
+  puts "Super Admin role not found. Please ensure the role exists."
+end
