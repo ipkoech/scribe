@@ -1,6 +1,5 @@
 class OtpController < ApplicationController
   before_action :authenticate_user!, only: [ :verify, :resend ]
-
   before_action :authorize_admin!, only: [ :enable_two_factor_for_user, :disable_two_factor_for_user ]
 
   def send_otp
@@ -17,7 +16,6 @@ class OtpController < ApplicationController
   rescue StandardError => e
     render json: { error: e.message }, status: :unprocessable_entity
   end
-
 
   def resend
       current_user.generate_otp!
@@ -69,7 +67,7 @@ class OtpController < ApplicationController
     end
 
     # Generate OTP code for the user
-    user.generate_o
+    user.generate_otp!
 
     # Update the user's 2FA status
     if user.update(otp_enabled: true)
@@ -77,8 +75,13 @@ class OtpController < ApplicationController
       UserMailer.otp_sent(user).deliver_later
 
       # Create and broadcast a notification to the user
-      create_and_broadcast_notification(user, "Two-factor authentication has been enabled for your account.")
-
+      create_and_broadcast_notification(
+        user: user,
+        message: "Two-factor authentication has been enabled for your account.",
+        actor: current_user,
+        action: 'enable_2fa',
+        data: { ip_address: request.remote_ip }
+      )
       render json: { message: "Two-factor authentication has been enabled for the user." }, status: :ok
     else
       render json: { error: "Failed to enable two-factor authentication for the user." }, status: :unprocessable_entity
@@ -99,7 +102,13 @@ class OtpController < ApplicationController
 
     user.clear_otp!
     if user.update(otp_enabled: false)
-      create_and_broadcast_notification(user, "Two-factor authentication has been disabled for your account.")
+      # Create and broadcast a notification to the user
+      create_and_broadcast_notification(
+        user: user,
+        message: "Two-factor authentication has been disabled for your account.",
+        actor: current_user,
+        action: 'disable_2fa'
+      )
       render json: { message: "Two-factor authentication has been disabled for the user." }, status: :ok
     else
       render json: { error: "Failed to disable two-factor authentication for the user." }, status: :unprocessable_entity
@@ -112,7 +121,13 @@ class OtpController < ApplicationController
 
     if code_valid?(params[:otp_code])
       current_user.update(otp_enabled: true, otp_code: nil)
-      create_and_broadcast_notification(current_user, "Two-factor authentication has been enabled.")
+        # Create and broadcast a notification to the user
+        create_and_broadcast_notification(
+          user: current_user,
+          message: "Two-factor authentication has been enabled for your account.",
+          actor: current_user,
+          action: 'enable_2fa'
+        )
 
       render json: { message: "Two-factor authentication has been enabled." }, status: :ok
     else
@@ -126,16 +141,33 @@ class OtpController < ApplicationController
     end
     current_user.clear_otp!
     current_user.update(otp_enabled: false)
-    create_and_broadcast_notification(current_user, "Two-factor authentication has been disabled.")
-
+    # Create and broadcast a notification to the user
+    create_and_broadcast_notification(
+    user: current_user,
+    message: "Two-factor authentication has been disabled for your account.",
+    actor: current_user,
+    action: 'enable_2fa'
+  )
+  
     render json: { message: "Two-factor authentication has been disabled." }, status: :ok
   end
 
   private
-  def create_and_broadcast_notification(user, message)
-    notification = Notification.create!(user: user, title: "2FA Status Change", body: message)
-    NotificationChannel.broadcast_to("notification_channel.#{user.id}", notification: notification)
-  end
+
+  def create_and_broadcast_notification(user:, message:, actor: nil, action: nil, data: {})
+  notification = Notification.create!(
+    recipient: user,
+    actor: actor,
+    notifiable: user,  # Assuming the notifiable is always a User
+    action: action,
+    data: {
+      message: message,
+      additional_info: data
+    }
+  )
+  
+  NotificationBroadcastJob.perform_later(notification)
+end
 
 
   def code_valid?(code)
@@ -144,7 +176,6 @@ class OtpController < ApplicationController
     return false if current_user.otp_expires_at.nil? || current_user.otp_expires_at < Time.current
     true
   end
-
 
   def authorize_admin!
     unless current_user.admin?
@@ -169,7 +200,6 @@ class OtpController < ApplicationController
       scp: "user",
       sub: user.id.to_s,    # Subject (user ID)
       otp_verified: true    # Custom claim indicating OTP verification status
-      # Add any additional custom claims here if needed
     }
 
     # Encode the payload to generate a new JWT

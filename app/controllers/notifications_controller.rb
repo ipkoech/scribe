@@ -1,21 +1,24 @@
 class NotificationsController < ApplicationController
   before_action :set_notification, only: %i[ show destroy ]
   before_action :authenticate_user!
-
   def index
-    notifications = current_user.notifications.ransack(params[:q]).result
+    @q = current_user.received_notifications.ransack(params[:q])
+    notifications = @q.result(distinct: true)
 
-    if params[:order_by].present?
-      order_params = params[:order_by].split(",")
-      notifications = notifications.order(order_params)
-    else
-      notifications = notifications.order(created_at: :desc)
-    end
+    # Apply default ordering if no sort parameter is provided
+    notifications = notifications.order(created_at: :desc) unless params.dig(:q, :s)
 
+    # Apply pagination
     notifications = notifications.page(params[:page] || 1).per(params[:per_page] || 10)
 
     render json: {
-      data: notifications.as_json,
+      data: notifications.as_json(
+        only: [:id, :action, :data, :read_at, :created_at, :updated_at],
+        include: {
+          actor: { only: [:id, :name, :email] },
+          notifiable: { only: [:id, :type] }
+        }
+      ),
       current_page: notifications.current_page,
       per_page: notifications.size,
       total_pages: notifications.total_pages,
@@ -24,7 +27,10 @@ class NotificationsController < ApplicationController
       last_page: notifications.last_page?,
       out_of_range: notifications.out_of_range?
     }
+  rescue => e
+    render json: { error: 'Failed to load notifications.', details: e.message }, status: :internal_server_error
   end
+
 
   def create
     @notification = Notification.new(notification_params)
