@@ -90,28 +90,32 @@ class UserMailer < ApplicationMailer
   end
 
 
-  def custom_notification_email(user, title, body, extra_params = {})
-    @user = user
-    @title = title
-    @body = body
+def custom_notification_email(user, title, body, extra_params = {})
+  @user = user
+  @title = title
+  @body = body
 
-    # Extract trigger_name from extra_params
-    trigger_name = extra_params.delete(:trigger_name)
+  # Extract trigger_name from extra_params
+  trigger_name = extra_params.delete(:trigger_name)
 
-    # Fetch task, draft, and other entities dynamically from extra_params
-    extra_params.each do |key, value|
-      if key.to_s.end_with?("_id")
-        model_name = key.to_s.chomp("_id").classify
-        instance_variable_set("@#{model_name.underscore}", model_name.constantize.find(value)) if value.present?
-      else
-        instance_variable_set("@#{key}", value)
+  # Safely handle model lookups
+  extra_params.each do |key, value|
+    if key.to_s.end_with?("_id") && value.present?
+      model_name = key.to_s.chomp("_id").classify
+      begin
+        instance_variable_set("@#{model_name.underscore}", model_name.constantize.find(value))
+      rescue NameError => e
+        Rails.logger.warn("Could not find model: #{model_name}")
       end
-    end
-
-    # Dynamically render template based on trigger_name
-    mail(to: @user.email, subject: @title) do |format|
-      format.html { render "user_mailer/#{trigger_name}" }
+    else
+      instance_variable_set("@#{key}", value)
     end
   end
+
+  mail(to: @user.email, subject: @title) do |format|
+    format.html { render "user_mailer/#{trigger_name}" }
+  end
+end
+
 
 end
