@@ -10,11 +10,11 @@ class ChatsController < ApplicationController
     # Create a chat for the user input
     @user_chat = @conversation.chats.create!(user_input: user_input, role: "user")
 
-    # Attach the file to the chat if provided
     if file.present?
-      @user_chat.file.attach(file) # Attach the file using Active Storage
+      FileUploadJob.perform_now("upload_file", @user_chat.id, file_data: file)
+      FileUploadJob.perform_later("broadcast_success", @user_chat.id)
     end
-    # Broadcast the creation of the user chat to the ConversationChannel
+
     ActionCable.server.broadcast("conversation_channel_#{@conversation.id}", {
       action: "chat_created",
       chat: @user_chat.as_json,
@@ -33,7 +33,8 @@ class ChatsController < ApplicationController
       end
       render json: { status: :ok }
     else
-      render json: { error: "Chat API request failed" }, status: :unprocessable_entity
+      @chat.destroy
+      render json: { error: "Failed to process your request" }, status: :unprocessable_entity
     end
   end
 
