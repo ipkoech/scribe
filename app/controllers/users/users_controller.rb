@@ -1,9 +1,10 @@
 class Users::UsersController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_user, only: [ :destroy, :show, :update ]
-  before_action :authorize_user, only: [ :destroy, :show, :update ]
+  before_action :set_user, only: [:destroy, :show, :update]
+  before_action :authorize_user, only: [:destroy, :show, :update]
 
-  wrap_parameters :user, include: [ :email, :password ]
+  wrap_parameters :user, include: [:email, :password]
+
   def assign_roles
     authorize User, :assign_roles?
 
@@ -65,14 +66,14 @@ class Users::UsersController < ApplicationController
           title: "profile_image_#{Time.current.to_i}",
           azure_url: azure_url,
           content_type: uploaded_file.content_type,
-          size: uploaded_file.size
+          size: uploaded_file.size,
         )
 
         current_user.update!(profile_image: azure_url)
 
         render json: {
           media: @media,
-          profile_image_url: azure_url
+          profile_image_url: azure_url,
         }, status: :ok
       rescue => e
         Rails.logger.error("Upload error: #{e.message}")
@@ -92,9 +93,9 @@ class Users::UsersController < ApplicationController
       begin
         params.require(:users).each do |user_params|
           random_password = SecureRandom.hex(8)
-          status = 'active'
+          status = "active"
 
-          merged_params = user_params.permit(:f_name,:l_name, :email, role_ids: [])
+          merged_params = user_params.permit(:f_name, :l_name, :email, role_ids: [])
                                      .merge(password: random_password, password_confirmation: random_password, status: status)
 
           user = User.new(merged_params.except(:role_ids))  # Exclude role_ids from initial assignment
@@ -122,7 +123,6 @@ class Users::UsersController < ApplicationController
       render json: errors.as_json, status: :unprocessable_entity
     end
   end
-
 
   def destroy
     authorize User
@@ -155,19 +155,19 @@ class Users::UsersController < ApplicationController
   end
 
   def show
-    render json: @user.as_json(except: [ :encrypted_password, :reset_password_token, :confirmation_token, :unlock_token ], methods: [ :roles, :drafts ]), status: :ok
+    render json: @user.as_json(except: [:encrypted_password, :reset_password_token, :confirmation_token, :unlock_token], methods: [:roles, :drafts]), status: :ok
   end
 
   def update
     authorize User
     @user = User.find(params[:id])
-    original_attributes = @user.attributes.slice("f_name","l_name", "email", "otp_enabled", "otp_secret_key")
+    original_attributes = @user.attributes.slice("f_name", "l_name", "email", "otp_enabled", "otp_secret_key")
     original_role_ids = @user.role_ids
 
     if @user.update(user_params.except(:role_ids))
       assign_roles_to_user(@user, params[:role_ids]) if params[:role_ids].present?
 
-      changes = detect_changes(original_attributes, @user.attributes.slice("f_name","l_name", "email", "otp_enabled", "otp_secret_key"))
+      changes = detect_changes(original_attributes, @user.attributes.slice("f_name", "l_name", "email", "otp_enabled", "otp_secret_key"))
       role_changes = detect_role_changes(original_role_ids, @user.role_ids)
       changes.merge!(role_changes)
 
@@ -185,7 +185,7 @@ class Users::UsersController < ApplicationController
   end
 
   def current
-    render json: current_user.as_json(except: [ :encrypted_password, :reset_password_token, :confirmation_token, :unlock_token ], methods: [ :roles ]), status: :ok
+    render json: current_user.as_json(except: [:encrypted_password, :reset_password_token, :confirmation_token, :unlock_token], methods: [:roles]), status: :ok
   end
 
   def chat
@@ -205,6 +205,13 @@ class Users::UsersController < ApplicationController
     end
   end
 
+  # Get user notifications
+  def notifications
+    notifications = current_user.received_notifications.order(created_at: :desc)
+    render json: { message: "No notifications found" }, status: :not_found if notifications.empty?
+    render json: notifications.as_json, status: :ok
+  end
+
   def permissions
     authorize User, :permissions?
     permissions = Permission.all
@@ -222,7 +229,7 @@ class Users::UsersController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:f_name,:l_name, :email, :password, :password_confirmation, :otp_enabled, :otp_secret_key, role_ids: [])
+    params.require(:user).permit(:f_name, :l_name, :email, :password, :password_confirmation, :otp_enabled, :otp_secret_key, role_ids: [])
   end
 
   def assign_roles_to_user(user, role_ids)
@@ -251,9 +258,9 @@ class Users::UsersController < ApplicationController
   def format_changes(changes)
     changes.map do |key, value|
       if key == :roles_added
-        "Roles added: #{value.join(', ')}"
+        "Roles added: #{value.join(", ")}"
       elsif key == :roles_removed
-        "Roles removed: #{value.join(', ')}"
+        "Roles removed: #{value.join(", ")}"
       else
         "#{key.to_s.humanize} changed from #{value[:from]} to #{value[:to]}"
       end
@@ -275,7 +282,7 @@ class Users::UsersController < ApplicationController
       total: users.count,
       first_page: true,
       last_page: true,
-      out_of_range: false
+      out_of_range: false,
     }
   end
 end

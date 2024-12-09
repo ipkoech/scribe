@@ -1,6 +1,7 @@
 class NotificationsController < ApplicationController
   before_action :set_notification, only: %i[ show destroy ]
   before_action :authenticate_user!
+
   def index
     @q = current_user.received_notifications.ransack(params[:q])
     notifications = @q.result(distinct: true)
@@ -16,8 +17,8 @@ class NotificationsController < ApplicationController
         only: [:id, :action, :data, :read_at, :created_at, :updated_at],
         include: {
           actor: { only: [:id, :name, :email] },
-          notifiable: { only: [:id, :type] }
-        }
+          notifiable: { only: [:id, :type] },
+        },
       ),
       current_page: notifications.current_page,
       per_page: notifications.size,
@@ -25,12 +26,11 @@ class NotificationsController < ApplicationController
       total: notifications.total_count,
       first_page: notifications.first_page?,
       last_page: notifications.last_page?,
-      out_of_range: notifications.out_of_range?
+      out_of_range: notifications.out_of_range?,
     }
   rescue => e
-    render json: { error: 'Failed to load notifications.', details: e.message }, status: :internal_server_error
+    render json: { error: "Failed to load notifications.", details: e.message }, status: :internal_server_error
   end
-
 
   def create
     @notification = Notification.new(notification_params)
@@ -61,7 +61,7 @@ class NotificationsController < ApplicationController
     NotificationChannel.broadcast_to(
       "notification_channel.#{current_user.id}",
       notification_ids: notification_ids,
-      action: "bulk_read"
+      action: "bulk_read",
     )
 
     render json: { success: true }, status: :ok
@@ -74,14 +74,22 @@ class NotificationsController < ApplicationController
     render json: notification.as_json, status: :ok
   end
 
-  private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_notification
-      @notification = Notification.find(params[:id])
-    end
+  def mark_all_as_read
+    notifications = Notification.where(recipient: current_user).unread
+    notifications.mark_all_as_read!(current_user)
 
-    # Only allow a list of trusted parameters through.
-    def notification_params
-      params.fetch(:notification, {})
-    end
+    render json: { success: true, message: "All notifications marked as read." }
+  end
+
+  private
+
+  # Use callbacks to share common setup or constraints between actions.
+  def set_notification
+    @notification = Notification.find(params[:id])
+  end
+
+  # Only allow a list of trusted parameters through.
+  def notification_params
+    params.fetch(:notification, {})
+  end
 end
