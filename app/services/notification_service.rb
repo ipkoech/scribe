@@ -15,7 +15,7 @@ class NotificationService
   def deliver
     ActiveRecord::Base.transaction do
       create_notification
-      # send_email
+      send_email
       broadcast_notification
       # track_delivery
     end
@@ -54,7 +54,7 @@ class NotificationService
       user,
       {
         action: "create",
-        notification: @notification.as_json(include:  [:recipient, :actor]),
+        notification: @notification.as_json(include: [:recipient, :actor]),
       }
     )
   end

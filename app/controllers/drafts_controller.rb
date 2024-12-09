@@ -233,15 +233,15 @@ class DraftsController < ApplicationController
 
     ActiveRecord::Base.transaction do
       if @draft.update(status: "rejected")
-        @draft.tasks.update_all(status: "completed")
         frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
+        reason = params[:reason]
 
         NotificationService.notify(
           user: @draft.author,
           body: "Your draft has been reviewed and unfortunately, it has been rejected. Please review the feedback and consider making revisions.",
           extra_params: {
             title: "'#{@draft.title}' draft has been rejected",
-            description: "Your draft has been reviewed and unfortunately, it has been rejected. Please review the feedback and consider making revisions.",
+            description: "Your draft has been reviewed and unfortunately, it has been rejected due to #{reason}. Please review the feedback and consider making revisions.",
             notifiable_type: "Draft",
             notifiable_id: @draft.id,
             draft_id: @draft.id,
@@ -336,6 +336,7 @@ class DraftsController < ApplicationController
           notifiable_id: @draft.id,
           frontend_url: frontend_url,
           actor: current_user,
+          trigger_name: "new_collaborator",
         },
       )
 
