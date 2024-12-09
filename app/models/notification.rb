@@ -13,7 +13,20 @@ class Notification < ApplicationRecord
     update(read_at: Time.current)
   end
 
-  
+  # Batch mark as read and broadcast
+  def self.mark_all_as_read!(user)
+    where(recipient: user, read_at: nil).update_all(read_at: Time.current)
+
+    # Broadcast a bulk read event to the user's notification channel
+    NotificationChannel.broadcast_to(
+      user,
+      {
+        action: "bulk_read",
+        notification_ids: where(recipient: user).pluck(:id), # IDs of notifications just marked as read
+      }
+    )
+  end
+
   # Ransack Configuration
   def self.ransackable_attributes(auth_object = nil)
     %w[

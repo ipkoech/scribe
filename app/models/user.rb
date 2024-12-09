@@ -11,12 +11,15 @@ class User < ApplicationRecord
   has_many :media
   has_many :conversations
   has_many :drafts
+  # Shared drafts
+  has_many :drafts_users, dependent: :destroy
+  has_many :drafts_as_collaborator, through: :drafts_users, source: :draft
   # has_and_belongs_to_many :drafts
   has_one_attached :profile_image
 
   # Notifications associations
-  has_many :received_notifications, class_name: 'Notification', foreign_key: 'recipient_id'
-  has_many :sent_notifications, class_name: "Notification",foreign_key: 'actor_id'
+  has_many :received_notifications, class_name: "Notification", foreign_key: "recipient_id"
+  has_many :sent_notifications, class_name: "Notification", foreign_key: "actor_id"
 
   def mark_all_notifications_as_read!
     notifications.where(read_at: nil).update_all(read_at: Time.current)
@@ -57,7 +60,7 @@ class User < ApplicationRecord
   def generate_otp!
     User.transaction do
       self.otp_code = 6.times.map { rand(10) }.join
-      Rails.logger.info('self.otp_code')
+      Rails.logger.info("self.otp_code")
       self.otp_expires_at = 15.minutes.from_now
       save!
     end
@@ -85,9 +88,11 @@ class User < ApplicationRecord
   def generate_otp_backup_codes # Generate 10 backup codes
     10.times.map { SecureRandom.hex(4) }
   end
+
   def admin?
-    roles.exists?(name: 'Super Admin')
+    roles.exists?(name: "Super Admin")
   end
+
   # RBAC methods
   def assign_role(role)
     roles << role unless roles.include?(role)

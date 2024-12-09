@@ -2,23 +2,27 @@ class DraftsController < ApplicationController
   before_action :set_draft, only: %i[ show update destroy ]
 
   # GET /drafts
-  # list all drafts
   def index
     drafts = policy_scope(Draft).ransack(params[:q]).result
+
     # Apply filters
     if params.dig(:filter, :status).present?
       status_filter = params[:filter][:status]
+      # Split status filters by comma and handle exclusions
       if status_filter.start_with?("!")
-        drafts = drafts.where.not(status: status_filter[1..-1]) # Exclude completed drafts
+        excluded_statuses = status_filter[1..-1].split(",")
+        drafts = drafts.where.not(status: excluded_statuses)
       else
-        drafts = drafts.where(status: status_filter)
+        statuses = status_filter.split(",")
+        drafts = drafts.where(status: statuses)
       end
     end
-    # drafts = drafts.where(status: params[:status]) if params[:status].present?
+
     drafts = drafts.where(created_at: params[:created_at]) if params[:created_at].present?
     drafts = drafts.where(user_id: params[:user_id]) if params[:user_id].present?
     drafts = drafts.where(fileable_type: params[:fileable_type]) if params[:fileable_type].present?
 
+    # Apply ordering
     if params[:order_by].present?
       order_params = params[:order_by].split(",")
       drafts = drafts.order(order_params)
@@ -26,10 +30,11 @@ class DraftsController < ApplicationController
       drafts = drafts.order(created_at: :desc)
     end
 
+    # Handle pagination
     if params[:per_page].to_i == -1
       drafts = drafts.all
       render json: {
-               data: drafts.as_json(include: {author: { only: [:id, :f_name, :email] }, collaborators: { only: [:id, :f_name, :email] }}),
+               data: drafts.as_json(include: { author: { only: [:id, :f_name, :email] }, collaborators: { only: [:id, :f_name, :email] } }),
                current_page: 1,
                per_page: drafts.size,
                total_pages: 1,
@@ -41,7 +46,7 @@ class DraftsController < ApplicationController
     else
       drafts = drafts.page(params[:page] || 1).per(params[:per_page] || 10)
       render json: {
-               data: drafts.as_json(include: {author: { only: [:id, :f_name, :email] }, collaborators: { only: [:id, :f_name, :email] }}),
+               data: drafts.as_json(include: { author: { only: [:id, :f_name, :email] }, collaborators: { only: [:id, :f_name, :email] } }),
                current_page: drafts.current_page,
                per_page: drafts.limit_value,
                total_pages: drafts.total_pages,
@@ -51,6 +56,61 @@ class DraftsController < ApplicationController
                out_of_range: drafts.out_of_range?,
              }, status: :ok
     end
+  end
+
+  def shared_drafts
+    # Fetch drafts where the current user is a collaborator, including their access levels
+    drafts_users = DraftsUser.where(user_id: current_user.id).includes(:draft)
+
+    # Extract draft IDs based on the DraftsUser records where the user is a collaborator
+    draft_ids = drafts_users.pluck(:draft_id)
+
+    # Fetch the associated drafts using the filtered draft IDs
+    @drafts = Draft.where(id: draft_ids)
+
+    # Apply additional filters (e.g., status, fileable_type) if provided
+    @drafts = @drafts.where(status: params[:status].split(",")) if params[:status].present?
+    @drafts = @drafts.where(fileable_type: params[:fileable_type]) if params[:fileable_type].present?
+
+    # Apply ordering
+    @drafts = if params[:order_by].present?
+        @drafts.order(params[:order_by])
+      else
+        @drafts.order(created_at: :desc)
+      end
+    # Handle pagination
+    @drafts = @drafts.page(params[:page] || 1).per(params[:per_page] || 10)
+
+    # Build the response with drafts and associated draft_users data
+    response_data = @drafts.as_json(
+      include: {
+        author: { only: [:id, :f_name, :email] },
+        collaborators: { only: [:id, :f_name, :email] },
+      },
+    )
+
+    # Add the access_level from draft_users to each draft in the response
+    response_data.each do |draft|
+      matching_draft_user = drafts_users.find { |du| du.draft_id == draft["id"] }
+      draft["access_level"] = matching_draft_user.access_level if matching_draft_user
+    end
+
+    # Add the reason
+    response_data.each do |draft|
+      matching_draft_user = drafts_users.find { |du| du.draft_id == draft["id"] }
+      draft["reason"] = matching_draft_user.reason if matching_draft_user
+    end
+
+    render json: {
+             data: response_data,
+             current_page: @drafts.current_page,
+             per_page: @drafts.limit_value,
+             total_pages: @drafts.total_pages,
+             total: @drafts.total_count,
+             first_page: @drafts.first_page?,
+             last_page: @drafts.last_page?,
+             out_of_range: @drafts.out_of_range?,
+           }, status: :ok
   end
 
   # POST /drafts
@@ -101,21 +161,22 @@ class DraftsController < ApplicationController
   def start_review
     @draft = Draft.find(params[:id])
     authorize @draft
-  
+
     ActiveRecord::Base.transaction do
       if @draft.update(status: "reviewing")
         review_users = User.joins(roles: :permissions)
           .where(permissions: { name: "review draft" })
           .distinct
-  
+
         frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
-  
+
         review_users.each do |user|
           NotificationService.notify(
             user: user,
             body: "You have been assigned to review the draft #{@draft.title}. Please complete it by #{(Time.current + 3.days).strftime("%B %d, %Y")}.",
             extra_params: {
               title: "New Draft Review Task Assigned",
+              description: "You have been assigned to review the draft #{@draft.title}. Please complete it by #{(Time.current + 3.days).strftime("%B %d, %Y")}.",
               notifiable_type: "Draft",
               notifiable_id: @draft.id,
               draft_id: @draft.id,
@@ -123,7 +184,7 @@ class DraftsController < ApplicationController
             },
           )
         end
-  
+
         render json: { draft: @draft }, status: :ok
       else
         render json: { errors: @draft.errors.full_messages }, status: :unprocessable_entity
@@ -133,27 +194,28 @@ class DraftsController < ApplicationController
   rescue NotificationService::NotificationError => e
     render json: { error: e.message }, status: :internal_server_error
   end
-  
+
   def approve
     @draft = Draft.find(params[:id])
     authorize @draft
-  
+
     ActiveRecord::Base.transaction do
       if @draft.update!(status: "approved")
         frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
-  
+
         NotificationService.notify(
           user: @draft.author,
           body: "Your draft has been reviewed and approved. Check the generated posts in the posts section.",
           extra_params: {
             title: "'#{@draft.title}' draft has been approved",
+            description: "Your draft has been reviewed and approved. Check the generated posts in the posts section.",
             notifiable_type: "Draft",
             notifiable_id: @draft.id,
             draft_id: @draft.id,
             frontend_url: frontend_url,
           },
         )
-  
+
         render json: @draft, status: :ok
       else
         raise ActiveRecord::Rollback
@@ -164,29 +226,29 @@ class DraftsController < ApplicationController
   rescue NotificationService::NotificationError => e
     render json: { error: e.message }, status: :internal_server_error
   end
-  
 
   def reject
     @draft = Draft.find(params[:id])
     authorize @draft
-  
+
     ActiveRecord::Base.transaction do
       if @draft.update(status: "rejected")
         @draft.tasks.update_all(status: "completed")
         frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
-  
+
         NotificationService.notify(
           user: @draft.author,
           body: "Your draft has been reviewed and unfortunately, it has been rejected. Please review the feedback and consider making revisions.",
           extra_params: {
             title: "'#{@draft.title}' draft has been rejected",
+            description: "Your draft has been reviewed and unfortunately, it has been rejected. Please review the feedback and consider making revisions.",
             notifiable_type: "Draft",
             notifiable_id: @draft.id,
             draft_id: @draft.id,
             frontend_url: frontend_url,
           },
         )
-  
+
         render json: @draft, status: :ok
       else
         render json: { errors: @draft.errors.full_messages }, status: :unprocessable_entity
@@ -196,7 +258,6 @@ class DraftsController < ApplicationController
   rescue NotificationService::NotificationError => e
     render json: { error: e.message }, status: :internal_server_error
   end
-  
 
   def add_collaborator
     user_ids = params[:user_ids] || []
@@ -205,44 +266,45 @@ class DraftsController < ApplicationController
     added_users = []
     errors = []
     @draft = Draft.find_by(id: params[:id])
-  
+
     ActiveRecord::Base.transaction do
       user_ids.each do |user_id|
         begin
           user = User.find(user_id)
-  
+
           if user == @draft.author
             errors << { user_id: user_id, message: "Cannot add the author as a collaborator." }
             next
           end
-  
+
           if @draft.collaborators.include?(user)
             errors << { user_id: user_id, message: "User is already a collaborator." }
             next
           end
-  
+
           drafts_user = DraftsUser.new(
             draft: @draft,
             user: user,
             reason: reason,
             access_level: access_level,
           )
-  
+
           if drafts_user.save
             frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
-  
+
             NotificationService.notify(
               user: user,
               body: "You have been given #{access_level} access to the draft for the following reason: #{reason}.",
               extra_params: {
                 title: "You have been added as a collaborator to '#{@draft.title}'",
+                description: "You have been given #{access_level} access to the draft for the following reason: #{reason}.",
                 notifiable_type: "Draft",
                 notifiable_id: @draft.id,
                 frontend_url: frontend_url,
                 trigger_name: "new_collaborator",
-              }
+              },
             )
-  
+
             added_users << user
           else
             errors << { user_id: user_id, message: drafts_user.errors.full_messages.join(", ") }
@@ -256,12 +318,12 @@ class DraftsController < ApplicationController
           raise ActiveRecord::Rollback
         end
       end
-  
+
       if errors.any?
         raise ActiveRecord::Rollback
       end
     end
-  
+
     if added_users.any?
       frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
       NotificationService.notify(
@@ -269,13 +331,14 @@ class DraftsController < ApplicationController
         body: "#{added_users.map(&:f_name).join(", ")} has been added as collaborators to your draft for the following reason: #{reason}.",
         extra_params: {
           title: "'#{@draft.title}' collaborator(s) added successfully",
+          description: "You have been given #{access_level} access to the draft for the following reason: #{reason}.",
           notifiable_type: "Draft",
           notifiable_id: @draft.id,
           frontend_url: frontend_url,
-          actor: current_user
-        }
+          actor: current_user,
+        },
       )
-  
+
       render json: { draft: @draft, added_collaborators: added_users, errors: errors }, status: :ok
     else
       render json: { error: "Unable to add collaborators.", details: errors }, status: :unprocessable_entity
@@ -283,13 +346,12 @@ class DraftsController < ApplicationController
   rescue NotificationService::NotificationError => e
     render json: { error: e.message }, status: :internal_server_error
   end
-  
 
   def remove_collaborator
     user_ids = params[:user_ids] || []
     removed_users = []
     @draft = Draft.find(params[:id])
-  
+
     ActiveRecord::Base.transaction do
       user_ids.each do |user_id|
         begin
@@ -301,6 +363,7 @@ class DraftsController < ApplicationController
               body: "Your access to this draft has been revoked.",
               extra_params: {
                 title: "You have been removed from the '#{@draft.title}' draft",
+                description: "Your access to this  '#{@draft.title}' has been revoked.",
                 notifiable_type: "Draft",
                 notifiable_id: @draft.id,
                 draft_id: @draft.id,
@@ -316,7 +379,7 @@ class DraftsController < ApplicationController
         end
       end
     end
-  
+
     if removed_users.any?
       render json: { draft: @draft, removed_collaborators: removed_users }, status: :ok
     else
@@ -325,7 +388,6 @@ class DraftsController < ApplicationController
   rescue NotificationService::NotificationError => e
     render json: { error: e.message }, status: :internal_server_error
   end
-  
 
   private
 

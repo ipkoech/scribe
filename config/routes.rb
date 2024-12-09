@@ -43,6 +43,7 @@ Rails.application.routes.draw do
         post :update, path: "update_details"
         post :chat, path: "chat"
         post :update_profile_image, path: "profile-image"
+        get :notifications, path: "notifications"
       end
     end
   end
@@ -57,7 +58,11 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :drafts, only: [:index, :create, :update, :show, :destroy] do
+  resources :drafts, only: [:index, :create, :update, :show, :destroy, :shared_drafts] do
+    # Shared drafts
+    collection do
+      get :shared_drafts, path: "shared-drafts"
+    end
     member do
       post "start_review"
       post "approve"
@@ -68,21 +73,21 @@ Rails.application.routes.draw do
     end
   end
 
-    # Define routes for OTP actions
-    post 'otp/send', to: 'otp#send_otp'
-    post 'otp/resend', to: 'otp#resend'
-    post 'otp/verify', to: 'otp#verify'
-  
-    # Define routes for enabling and disabling OTP
-    post 'otp/enable', to: 'otp#enable_two_factor'
-    post 'otp/disable', to: 'otp#disable_two_factor'
-    post '/users/:user_id/otp/enable', to: 'otp#enable_two_factor_for_user'
-    post '/users/:user_id/otp/disable', to: 'otp#disable_two_factor_for_user'
-  
+  # Define routes for OTP actions
+  post "otp/send", to: "otp#send_otp"
+  post "otp/resend", to: "otp#resend"
+  post "otp/verify", to: "otp#verify"
+
+  # Define routes for enabling and disabling OTP
+  post "otp/enable", to: "otp#enable_two_factor"
+  post "otp/disable", to: "otp#disable_two_factor"
+  post "/users/:user_id/otp/enable", to: "otp#enable_two_factor_for_user"
+  post "/users/:user_id/otp/disable", to: "otp#disable_two_factor_for_user"
+
   # notifications
   resources :notifications do
     post :mark_as_read, on: :member, path: "mark-as-read"
-    post :mark_all_as_read, on: :collection
+    post :mark_all_as_read, on: :collection, path: "mark-all-read"
   end
   # Conversations and chats
   resources :conversations, only: [:index, :create, :show, :destroy, :update] do

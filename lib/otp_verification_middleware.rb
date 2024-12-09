@@ -1,7 +1,7 @@
 class OtpVerificationMiddleware
   # Routes for which OTP verification will be skipped
   # SKIP_OTP_VERIFICATION_PATHS = ['/otp/resend', '/otp/verify', 'login', 'forgot', '/reset','/drafts/callback']
-  SKIP_OTP_VERIFICATION_PATHS = [ "/otp/resend", "/otp/verify", "/login", "forgot", "password/reset", "/drafts/callback" ]
+  SKIP_OTP_VERIFICATION_PATHS = [ "/otp/resend", "/otp/verify", "/login", "/logout", "forgot", "password/reset", "/drafts/callback" ]
 
   def initialize(app)
     @app = app

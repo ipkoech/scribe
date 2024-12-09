@@ -9,7 +9,7 @@ module Scribe
     config.load_defaults 7.2
     config.autoload_lib(ignore: %w[assets tasks])
     # Middleware configuration
-    config.middleware.use OtpVerificationMiddleware
+    # config.middleware.use OtpVerificationMiddleware
     config.api_only = true
     config.active_job.queue_adapter = :sidekiq
   end

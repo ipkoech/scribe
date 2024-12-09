@@ -76,6 +76,7 @@ Rails.application.configure do
     "instascribe.revcat.cloud",
     "www.instascribe.revcat.cloud",
     "34.72.37.133",
+    "172.205.250.247"
   ]
   config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end
