@@ -100,9 +100,9 @@ else
 end
 
 # 6. Create a Super Admin User
-super_admin = User.find_or_create_by!(email: 'roblineyegon@gmail.com') do |user|
-  user.f_name = 'Robline'
-  user.l_name = 'Yegon'
+super_admin = User.find_or_create_by!(email: 'samuelndambuki401@gmail.com') do |user|
+  user.f_name = 'Samuel'
+  user.l_name = 'Ndambuki'
   user.status = 'active'
   user.otp_enabled = false
   user.password = 'password'
