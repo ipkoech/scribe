@@ -94,9 +94,10 @@ Rails.application.routes.draw do
   # Conversations and chats
   resources :conversations, only: [:index, :create, :show, :destroy, :update] do
     member do
-      patch :archive
+      post :archive
+      post :unarchive
       post :share
-      post :update, path: "update"
+      post :update
     end
     resources :chats, only: [:index, :create, :update] do
       member do
