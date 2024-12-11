@@ -1,3 +1,5 @@
+require "diff/lcs"
+
 class DraftsController < ApplicationController
   before_action :set_draft, only: %i[ show update destroy ]
 
@@ -140,10 +142,14 @@ class DraftsController < ApplicationController
     render json: @draft.as_json(
       include: {
         author: { only: [:id, :f_name, :email] },
-        collaborators: { only: [:id, :f_name, :email] },
+        collaborators: { only: [:id, :f_name, :email, :last_seen_at] },
         comments: {
           include: { user: { only: [:id, :f_name, :email] } },
           only: [:id, :content, :created_at, :updated_at],
+        },
+        draft_versions: {
+          include: { user: { only: [:id, :f_name, :email] } },
+          only: [:id, :content, :content_changes, :created_at, :updated_at],
         },
       },
     ), status: :ok
@@ -151,11 +157,20 @@ class DraftsController < ApplicationController
 
   def update
     @draft = Draft.find(params[:id])
+    old_content = @draft.content
+
     if @draft.update(draft_params)
+      create_draft_version(old_content)
       render json: @draft, status: :ok
     else
       render json: { errors: @draft.errors.full_messages }, status: :unprocessable_entity
     end
+  end
+
+  def history
+    @draft = Draft.find(params[:id])
+    versions = @draft.draft_versions.order(created_at: :asc).includes(:user)
+    render json: versions, include: { user: { only: [:id, :f_name, :email] } }
   end
 
   def start_review
@@ -395,6 +410,39 @@ class DraftsController < ApplicationController
   # Use callbacks to share common setup or constraints between actions.
   def set_draft
     @draft = Draft.find(params[:id])
+  end
+
+  def create_draft_version(old_content)
+    changes = calculate_changes(old_content, @draft.content)
+    @draft.draft_versions.create(
+      content: old_content,
+      content_changes: changes,
+      user: current_user,
+    )
+  end
+
+  def calculate_changes(old_content, new_content)
+    changes = {}
+    old_lines = old_content.split("\n")
+    new_lines = new_content.split("\n")
+
+    diff = Diff::LCS.diff(old_lines, new_lines)
+
+    diff.each_with_index do |change, index|
+      change.each do |c|
+        line_number = c.position + 1
+        changes[line_number] ||= { removed: [], added: [] }
+
+        case c.action
+        when "+"
+          changes[line_number][:added] << c.element
+        when "-"
+          changes[line_number][:removed] << c.element
+        end
+      end
+    end
+
+    changes
   end
 
   # Only allow a list of trusted parameters through.

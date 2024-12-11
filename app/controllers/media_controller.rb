@@ -55,9 +55,12 @@ class MediaController < ApplicationController
 
     begin
       azure_url = blob_service.upload(uploaded_file, current_user.id)
+      encoded_azure_url = azure_url.split("/", -1).tap do |parts|
+        parts[-1] = URI.encode_www_form_component(parts[-1]) if parts.size > 1
+      end.join("/")
       @media = current_user.media.new(
         title: uploaded_file.original_filename,
-        azure_url: azure_url,
+        azure_url: encoded_azure_url,
         content_type: uploaded_file.content_type,
         size: uploaded_file.size,
       )
@@ -124,9 +127,16 @@ class MediaController < ApplicationController
 
   # Helper method to extract the blob name from the full URL
   def extract_blob_name(blob_url)
-    uri = URI.parse(blob_url)
-    # Remove the leading slash and container name
-    uri.path.sub(%r{^/+}, "")
+    begin
+      uri = URI.parse(blob_url)
+      # Remove the leading slash and container name
+      uri.path.sub(%r{^/+}, "")
+    rescue URI::InvalidURIError
+      # Handle the case where the URL is invalid, likely due to spaces or special characters
+      # Split the URL by the last slash and URL-decode the last part (the blob name)
+      container_url, blob_name = blob_url.split("/", -1) # Split by last slash
+      URI.decode_www.form_urlencoded_str(blob_name) if blob_name # Decode if blob_name exists
+    end
   end
 
   # Helper method to build the JSON response for a medium

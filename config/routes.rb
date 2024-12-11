@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  resources :draft_versions
   resources :comments
   require "sidekiq/web"
   devise_for :users, defaults: { format: :json }, path: "", path_names: {
@@ -70,6 +71,7 @@ Rails.application.routes.draw do
       post "remove_collaborator"
       post "add_collaborator"
       post :update
+      get :history, path: "history"
     end
   end
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2024_11_22_032802) do
+ActiveRecord::Schema[7.2].define(version: 2024_12_10_152141) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -96,6 +96,17 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_22_032802) do
     t.index ["conversation_id", "user_id"], name: "index_conversations_users_on_conversation_id_and_user_id", unique: true
     t.index ["conversation_id"], name: "index_conversations_users_on_conversation_id"
     t.index ["user_id"], name: "index_conversations_users_on_user_id"
+  end
+
+  create_table "draft_versions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "draft_id", null: false
+    t.text "content"
+    t.text "content_changes"
+    t.uuid "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["draft_id"], name: "index_draft_versions_on_draft_id"
+    t.index ["user_id"], name: "index_draft_versions_on_user_id"
   end
 
   create_table "drafts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -281,6 +292,8 @@ ActiveRecord::Schema[7.2].define(version: 2024_11_22_032802) do
   add_foreign_key "conversations", "users"
   add_foreign_key "conversations_users", "conversations"
   add_foreign_key "conversations_users", "users"
+  add_foreign_key "draft_versions", "drafts"
+  add_foreign_key "draft_versions", "users"
   add_foreign_key "drafts", "users"
   add_foreign_key "drafts_users", "drafts"
   add_foreign_key "drafts_users", "users"

@@ -1,6 +1,8 @@
 class Draft < ApplicationRecord
   belongs_to :author, class_name: "User", foreign_key: "user_id"
 
+  has_many :draft_versions, dependent: :destroy
+
   # Collaborator associations
   has_many :drafts_users, dependent: :destroy
   has_many :collaborators, through: :drafts_users, source: :user, class_name: "User"

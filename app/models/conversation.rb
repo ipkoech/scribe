@@ -18,7 +18,29 @@ class Conversation < ApplicationRecord
       "conversation_channel_#{self.id}",
       {
         action: "create",
-        chat: self.as_json
+        chat: self.as_json,
+      }
+    )
+  end
+
+  # Broadcasts a message to the conversation's channel
+  def broadcast_message(message)
+    ActionCable.server.broadcast(
+      "conversation_channel_#{self.id}",
+      {
+        action: "message",
+        chat: message.as_json,
+      }
+    )
+  end
+
+  # Broadcasts on update
+  def broadcast_update
+    ActionCable.server.broadcast(
+      "conversation_channel_#{self.id}",
+      {
+        action: "update",
+        chat: self.as_json,
       }
     )
   end
