@@ -2,9 +2,15 @@ class NotificationChannel < ApplicationCable::Channel
   include Pundit::Authorization
 
   def subscribed
-    @user = find_verified_user
-    authorize_and_stream
-  rescue StandardError => e
+    @user = User.find_by(id: params[:user_id])
+    Rails.logger.info("Subscribed to notifications for user #{@user.f_name}")
+    if @user && policy(@user).show?
+      stream_for @user
+    else
+      Rails.logger.error("Pundit::NotAuthorizedError:")
+      reject
+    end
+  rescue Pundit::NotAuthorizedError
     reject
   end
 
@@ -19,19 +25,6 @@ class NotificationChannel < ApplicationCable::Channel
   end
 
   private
-
-  def find_verified_user
-    User.find_by!(id: params[:user_id])
-  end
-
-  def authorize_and_stream
-    if policy(@user).show?
-      stream_for @user
-      broadcast_connection_status("connected")
-    else
-      raise Pundit::NotAuthorizedError
-    end
-  end
 
   def process_notification_update(data)
     notification_ids = data["notification_ids"]
@@ -80,6 +73,6 @@ class NotificationChannel < ApplicationCable::Channel
   end
 
   def policy(record)
-    NotificationPolicy.new(current_user, record)
+    Pundit.policy!(current_user, record)
   end
 end

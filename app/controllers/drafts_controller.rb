@@ -173,6 +173,7 @@ class DraftsController < ApplicationController
     render json: versions, include: { user: { only: [:id, :f_name, :email] } }
   end
 
+  # app/controllers/drafts_controller.rb
   def start_review
     @draft = Draft.find(params[:id])
     authorize @draft
@@ -180,10 +181,10 @@ class DraftsController < ApplicationController
     ActiveRecord::Base.transaction do
       if @draft.update(status: "reviewing")
         review_users = User.joins(roles: :permissions)
-          .where(permissions: { name: "review draft" })
-          .distinct
+                           .where(permissions: { name: "review draft" })
+                           .distinct
 
-        frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
+        frontend_url = "#{Rails.application.credentials.frontend_url}/content/review/#{@draft.id}"
 
         review_users.each do |user|
           NotificationService.notify(
@@ -196,6 +197,7 @@ class DraftsController < ApplicationController
               notifiable_id: @draft.id,
               draft_id: @draft.id,
               frontend_url: frontend_url,
+              trigger_name: "start_review",
             },
           )
         end
@@ -216,7 +218,7 @@ class DraftsController < ApplicationController
 
     ActiveRecord::Base.transaction do
       if @draft.update!(status: "approved")
-        frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
+        frontend_url = "#{Rails.application.credentials.frontend_url}/content/posts/#{@draft.id}"
 
         NotificationService.notify(
           user: @draft.author,
@@ -228,6 +230,7 @@ class DraftsController < ApplicationController
             notifiable_id: @draft.id,
             draft_id: @draft.id,
             frontend_url: frontend_url,
+            trigger_name: "approved",
           },
         )
 
@@ -248,7 +251,7 @@ class DraftsController < ApplicationController
 
     ActiveRecord::Base.transaction do
       if @draft.update(status: "rejected")
-        frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
+        frontend_url = "#{Rails.application.credentials.frontend_url}/content/drafts/#{@draft.id}"
         reason = params[:reason]
 
         NotificationService.notify(
@@ -261,6 +264,7 @@ class DraftsController < ApplicationController
             notifiable_id: @draft.id,
             draft_id: @draft.id,
             frontend_url: frontend_url,
+            trigger_name: "rejected",
           },
         )
 
@@ -305,7 +309,7 @@ class DraftsController < ApplicationController
           )
 
           if drafts_user.save
-            frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
+            frontend_url = "#{Rails.application.credentials.frontend_url}/content/drafts/#{@draft.id}"
 
             NotificationService.notify(
               user: user,
@@ -340,7 +344,7 @@ class DraftsController < ApplicationController
     end
 
     if added_users.any?
-      frontend_url = "#{Rails.application.credentials.frontend_url}/drafts/#{@draft.id}"
+      frontend_url = "#{Rails.application.credentials.frontend_url}/content/drafts/#{@draft.id}"
       NotificationService.notify(
         user: @draft.author,
         body: "#{added_users.map(&:f_name).join(", ")} has been added as collaborators to your draft for the following reason: #{reason}.",
