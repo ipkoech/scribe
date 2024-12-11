@@ -7,6 +7,9 @@ class ChatsController < ApplicationController
     user_input = params[:user_input]
     file = params[:file]
 
+    # Check if the conversation is new
+    is_new_conversation = @conversation.chats.empty?
+
     # Create a chat for the user input
     @user_chat = @conversation.chats.create!(user_input: user_input, role: "user")
 
@@ -21,19 +24,27 @@ class ChatsController < ApplicationController
     })
 
     # Generate bot response using ChatService
-    chat_service = ChatService.new(@user_chat)
+    chat_service = ChatService.new(@user_chat, is_new_conversation)
     bot_response = chat_service.call
 
     if bot_response
+      # Rails.logger.info "Bot response: #{bot_response["content"]}"
       # Update the same chat instance with bot response
-      @user_chat.update(bot_reply: bot_response, role: "bot")
+      @user_chat.update(bot_reply: bot_response["content"], role: "bot")
 
-      if @conversation.chats.count == 1 && @conversation.title.blank?
-        @conversation.update(title: user_input)
+      # Add 'new' tag if it's a new conversation
+      if is_new_conversation && @conversation.title.blank?
+        @conversation.update(title: bot_response["title"])
+        # Broadcast new conversation title to other users
+        ActionCable.server.broadcast("conversation_channel_#{@conversation.id}", {
+          action: "new_conversation_title",
+          title: @conversation.title,
+        })
       end
+
       render json: { status: :ok }
     else
-      @chat.destroy
+      @user_chat.destroy
       render json: { error: "Failed to process your request" }, status: :unprocessable_entity
     end
   end

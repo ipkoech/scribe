@@ -11,7 +11,7 @@ gem "devise"
 gem "rack-attack"
 
 gem "redis"
-
+gem "diff-lcs"
 gem "whenever", require: false
 gem "sidekiq"
 
@@ -26,10 +26,9 @@ gem "devise-jwt"
 gem "kaminari"
 
 gem "ransack"
-gem "dotenv-rails", groups: [ :development, :test ]
+gem "dotenv-rails", groups: [:development, :test]
 
 gem "faker" # TODO: remove in prod
-
 
 gem "pundit", "~> 2.3"
 
@@ -49,7 +48,6 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "azure-blob"
 
 gem "mime-types"
-
 
 # Markdown conversion
 gem "redcarpet"
