@@ -110,13 +110,11 @@ Rails.application.routes.draw do
   end
 
   resources :comments, only: [:index, :create, :destroy, :update, :show]
-    resource :company,only:[:show,:update]
+  resource :companies,only:[:show,:update]
 
   get "up" => "rails/health#show", as: :rails_health_check
   mount ActionCable.server => "/cable"
   mount Sidekiq::Web => "/sidekiq"
-
-
 
 end
 
