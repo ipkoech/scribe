@@ -8,6 +8,7 @@ Rails.application.routes.draw do
                      }, controllers: {
                        sessions: "users/sessions",
                        registrations: "users/registrations",
+                       passwords: 'users/passwords'
                      }
   # Sessions
   devise_scope :user do
@@ -26,6 +27,10 @@ Rails.application.routes.draw do
       delete "revoke-users", to: "roles#remove_users"
     end
   end
+  # passwords
+  post '/forgot', to: 'passwords#forgot', default: { format: :json }
+  post '/reset', to: 'passwords#reset', default: { format: :json }
+  get '/password/edit', to: 'passwords#edit', default: { format: :json }
 
   scope module: :users do
     resources :users, only: [:index, :create, :destroy, :show, :update, :chat, :update_profile_image] do
@@ -105,8 +110,12 @@ Rails.application.routes.draw do
   end
 
   resources :comments, only: [:index, :create, :destroy, :update, :show]
+  resource :companies,only:[:show,:update]
 
   get "up" => "rails/health#show", as: :rails_health_check
   mount ActionCable.server => "/cable"
   mount Sidekiq::Web => "/sidekiq"
+
 end
+
+

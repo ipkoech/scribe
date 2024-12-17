@@ -13,11 +13,11 @@ class UserMailer < ApplicationMailer
     @random_password = random_password
     mail(to: @user.email, subject: "Invitation and Password Information")
   end
-
-  def reset_password_instructions(user, token)
+  
+  def reset_password_instructions(user, token, _options = {})
     @user = user
     @token = token
-    mail(to: @user.email, subject: "Reset password instructions")
+    mail(to: @user.email, subject: 'Reset password instructions')
   end
 
   def password_change(user)

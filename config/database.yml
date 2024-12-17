@@ -1,3 +1,5 @@
+# @format
+
 default: &default
   adapter: postgresql
   encoding: unicode
@@ -5,18 +7,18 @@ default: &default
 
 development:
   <<: *default
-  database: scribe_backend_development1
+  database: instascribe_backend_development
   username: <%= Rails.application.credentials.dig(:database, :username) %>
   password: <%= Rails.application.credentials.dig(:database, :password) %>
 
 test:
   <<: *default
-  database: scribe_backend_test1
+  database: instascribe_backend_test
   username: <%= Rails.application.credentials.dig(:database, :username) %>
   password: <%= Rails.application.credentials.dig(:database, :password) %>
 
 production:
   <<: *default
-  database: scribe_backend_production1
+  database: instascribe_backend_production
   username: <%= Rails.application.credentials.dig(:database, :username) %>
   password: <%= Rails.application.credentials.dig(:database, :password) %>
