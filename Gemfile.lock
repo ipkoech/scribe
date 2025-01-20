@@ -73,7 +73,7 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
     ast (2.4.2)
-    azure-blob (0.5.4)
+    azure-blob (0.5.6)
       rexml
     base64 (0.2.0)
     bcrypt (3.1.20)
@@ -274,7 +274,7 @@ GEM
     responders (3.1.1)
       actionpack (>= 5.2)
       railties (>= 5.2)
-    rexml (3.3.9)
+    rexml (3.4.0)
     rgeo (3.0.1)
     rqrcode (2.2.0)
       chunky_png (~> 1.0)
